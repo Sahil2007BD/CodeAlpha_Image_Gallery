@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Premium Gallery</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<header class="glass">
+  <h1>Image Gallery</h1>
+
+  <div class="controls">
+    <button onclick="toggleDarkMode()">🌙 Toggle</button>
+
+    <input type="file" id="upload" accept="image/*">
+  </div>
+
+  <div class="filters">
+    <button onclick="filterImages('all')">All</button>
+    <button onclick="filterImages('nature')">Nature</button>
+    <button onclick="filterImages('city')">City</button>
+    <button onclick="filterImages('people')">People</button>
+  </div>
+</header>
+
+<div class="gallery" id="gallery"></div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <span class="close" onclick="closeLightbox()">&times;</span>
+  <img id="lightbox-img">
+
+  <div class="nav">
+    <button onclick="prevImage()">Prev</button>
+    <button onclick="nextImage()">Next</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
