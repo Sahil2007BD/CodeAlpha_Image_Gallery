@@ -1,162 +1,152 @@
-const gallery = document.getElementById("gallery");
-const uploadInput = document.getElementById("upload");
-const dropZone = document.getElementById("dropZone");
-
-let images = [
-  {src:"https://picsum.photos/id/1018/400/300", category:"nature"},
-  {src:"https://picsum.photos/id/1015/400/300", category:"city"},
-  {src:"https://picsum.photos/id/1005/400/300", category:"people"},
-];
+let images = JSON.parse(localStorage.getItem("gallery")) || [];
 
 let currentIndex = 0;
 
-// Render
-function renderGallery() {
+const gallery = document.getElementById("gallery");
+const upload = document.getElementById("upload");
+const dropZone = document.getElementById("dropZone");
+
+
+// ---------- TOAST ----------
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.style.display = "block";
+
+  setTimeout(() => {
+    t.style.display = "none";
+  }, 2000);
+}
+
+
+// ---------- SAVE ----------
+function save() {
+  localStorage.setItem("gallery", JSON.stringify(images));
+}
+
+
+// ---------- RENDER ----------
+function render() {
   gallery.innerHTML = "";
 
   images.forEach((img, index) => {
     const div = document.createElement("div");
-    div.classList.add("image");
+    div.className = "image";
     div.dataset.category = img.category;
+    div.dataset.index = index; // ✅ FIX for drag reorder
+
+    div.draggable = true;
 
     div.innerHTML = `
       <img src="${img.src}" loading="lazy" onclick="openLightbox(${index})">
-
-      <div class="actions">
-        <button onclick="deleteImage(${index})">🗑</button>
-        <button onclick="editCategory(${index})">✏️</button>
-      </div>
     `;
 
     gallery.appendChild(div);
   });
-}
-renderGallery();
 
-
-// ---------------- FILTER ----------------
-function filterImages(category) {
-  document.querySelectorAll(".image").forEach(item => {
-    if (category === "all" || item.dataset.category === category) {
-      item.classList.remove("hide");
-    } else {
-      item.classList.add("hide");
-    }
-  });
+  enableDragSort();
 }
 
-
-// ---------------- LIGHTBOX ----------------
-const lightbox = document.getElementById("lightbox");
-const lightboxImg = document.getElementById("lightbox-img");
-
-function openLightbox(index) {
-  currentIndex = index;
-  lightbox.style.display = "flex";
-  showImage();
-}
-
-function closeLightbox() {
-  lightbox.style.display = "none";
-}
-
-function showImage() {
-  lightboxImg.src = images[currentIndex].src;
-}
-
-function nextImage() {
-  currentIndex = (currentIndex + 1) % images.length;
-  showImage();
-}
-
-function prevImage() {
-  currentIndex = (currentIndex - 1 + images.length) % images.length;
-  showImage();
-}
+render();
 
 
-// ---------------- DRAG & DROP ----------------
-
-// Click to open file picker
-dropZone.addEventListener("click", () => uploadInput.click());
-
-// Drag events
-dropZone.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  dropZone.classList.add("dragover");
-});
-
-dropZone.addEventListener("dragleave", () => {
-  dropZone.classList.remove("dragover");
-});
-
-dropZone.addEventListener("drop", (e) => {
-  e.preventDefault();
-  dropZone.classList.remove("dragover");
-
-  const file = e.dataTransfer.files[0];
-  handleFile(file);
-});
-
-// File input fallback
-uploadInput.addEventListener("change", () => {
-  const file = uploadInput.files[0];
-  handleFile(file);
-});
-
-function handleFile(file) {
-  if (!file || !file.type.startsWith("image/")) return;
+// ---------- ADD IMAGE ----------
+function addImage(file) {
+  if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+
+  reader.onload = () => {
     images.push({
-      src: e.target.result,
-      category: "custom"
+      src: reader.result,
+      category: "nature"
     });
-    renderGallery();
+
+    save();
+    render();
+    toast("Image added ✔");
   };
+
   reader.readAsDataURL(file);
 }
 
 
-// ---------------- DELETE ----------------
-function deleteImage(index) {
-  if (confirm("Delete this image?")) {
-    images.splice(index, 1);
-    renderGallery();
-  }
+// ---------- DELETE ----------
+function deleteImg(index) {
+  images.splice(index, 1);
+  save();
+  render();
+  toast("Deleted 🗑");
 }
 
 
-// ---------------- EDIT ----------------
-function editCategory(index) {
-  const newCategory = prompt("Enter category (nature/city/people/custom):");
-
-  if (newCategory) {
-    images[index].category = newCategory.toLowerCase();
-    renderGallery();
-  }
+// ---------- CATEGORY ----------
+function changeCategory(index, value) {
+  images[index].category = value;
+  save();
+  toast("Category updated");
 }
 
 
-// ---------------- SWIPE ----------------
-let startX = 0;
-
-lightbox.addEventListener("touchstart", e => {
-  startX = e.touches[0].clientX;
-});
-
-lightbox.addEventListener("touchend", e => {
-  let endX = e.changedTouches[0].clientX;
-
-  if (startX - endX > 50) nextImage();
-  if (endX - startX > 50) prevImage();
-});
+// ---------- FILTER ----------
+function filterImages(cat) {
+  document.querySelectorAll(".image").forEach(el => {
+    el.style.display =
+      cat === "all" || el.dataset.category === cat ? "block" : "none";
+  });
+}
 
 
-// ---------------- DARK MODE ----------------
+// ---------- DRAG & DROP UPLOAD ----------
+dropZone.onclick = () => upload.click();
+
+dropZone.ondragover = e => {
+  e.preventDefault();
+  dropZone.style.borderColor = "#4f9cff";
+};
+
+dropZone.ondragleave = () => {
+  dropZone.style.borderColor = "gray";
+};
+
+dropZone.ondrop = e => {
+  e.preventDefault();
+  addImage(e.dataTransfer.files[0]);
+};
+
+upload.onchange = () => addImage(upload.files[0]);
+
+
+// ---------- LIGHTBOX ----------
+function openLightbox(i) {
+  currentIndex = i;
+  document.getElementById("lightbox").style.display = "flex";
+  show();
+}
+
+function closeLightbox() {
+  document.getElementById("lightbox").style.display = "none";
+}
+
+function show() {
+  document.getElementById("lightbox-img").src = images[currentIndex].src;
+}
+
+function nextImage() {
+  currentIndex = (currentIndex + 1) % images.length;
+  show();
+}
+
+function prevImage() {
+  currentIndex = (currentIndex - 1 + images.length) % images.length;
+  show();
+}
+
+
+// ---------- DARK MODE ----------
 function toggleDarkMode() {
   document.body.classList.toggle("light");
+
   localStorage.setItem(
     "theme",
     document.body.classList.contains("light") ? "light" : "dark"
@@ -165,4 +155,32 @@ function toggleDarkMode() {
 
 if (localStorage.getItem("theme") === "light") {
   document.body.classList.add("light");
+}
+
+
+// ---------- DRAG TO REORDER ----------
+function enableDragSort() {
+  const items = document.querySelectorAll(".image");
+
+  items.forEach(item => {
+    item.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("from", item.dataset.index);
+    });
+
+    item.addEventListener("dragover", e => e.preventDefault());
+
+    item.addEventListener("drop", e => {
+      e.preventDefault();
+
+      const from = e.dataTransfer.getData("from");
+      const to = item.dataset.index;
+
+      const moved = images.splice(from, 1)[0];
+      images.splice(to, 0, moved);
+
+      save();
+      render();
+      toast("Reordered 🔄");
+    });
+  });
 }
