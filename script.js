@@ -1,15 +1,45 @@
 let images = JSON.parse(localStorage.getItem("gallery")) || [];
 
-let currentIndex = 0;
+let pendingFile = null;
+let selectedCategory = "nature";
 
 const gallery = document.getElementById("gallery");
 const upload = document.getElementById("upload");
 const dropZone = document.getElementById("dropZone");
+let currentFilter = "all";
 
+// ---------- SAVE ----------
+function save() {
+  localStorage.setItem("gallery", JSON.stringify(images));
+}
+
+// ---------- RENDER ----------
+function render() {
+  gallery.innerHTML = "";
+
+  images.forEach((img, i) => {
+    const div = document.createElement("div");
+    div.className = "image";
+
+    div.innerHTML = `
+      <img src="${img.src}" onclick="openLightbox(${i})">
+      <button onclick="deleteImg(${i})">🗑</button>
+    `;
+
+    gallery.appendChild(div);
+  });
+
+  // 🔥 re-apply filter after every render
+  applyFilter();
+}
+
+render();
 
 // ---------- TOAST ----------
 function toast(msg) {
   const t = document.getElementById("toast");
+  if (!t) return;
+
   t.innerText = msg;
   t.style.display = "block";
 
@@ -18,169 +48,134 @@ function toast(msg) {
   }, 2000);
 }
 
+// ---------- ADD FLOW ----------
+function addImage(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    toast("Invalid file ❌");
+    return;
+  }
 
-// ---------- SAVE ----------
-function save() {
-  localStorage.setItem("gallery", JSON.stringify(images));
+  pendingFile = file;
+  openPopup();
 }
 
+// ---------- POPUP OPEN ----------
+function openPopup() {
+  const popup = document.getElementById("popup");
+  if (!popup) return;
 
-// ---------- RENDER ----------
-function render() {
-  gallery.innerHTML = "";
+  popup.classList.remove("hidden");
 
-  images.forEach((img, index) => {
-    const div = document.createElement("div");
-    div.className = "image";
-    div.dataset.category = img.category;
-    div.dataset.index = index; // ✅ FIX for drag reorder
-
-    div.draggable = true;
-
-    div.innerHTML = `
-      <img src="${img.src}" loading="lazy" onclick="openLightbox(${index})">
-    `;
-
-    gallery.appendChild(div);
+  // reset selection UI
+  document.querySelectorAll(".cat-btn").forEach(btn => {
+    btn.classList.remove("active");
   });
 
-  enableDragSort();
+  // default selection
+  selectedCategory = "nature";
+  const firstBtn = document.querySelector(".cat-btn");
+  if (firstBtn) firstBtn.classList.add("active");
 }
 
-render();
+// ---------- CATEGORY SELECT ----------
+function setCategory(cat, event) {
+  selectedCategory = cat;
 
+  document.querySelectorAll(".cat-btn").forEach(btn => {
+    btn.classList.remove("active");
+  });
 
-// ---------- ADD IMAGE ----------
-function addImage(file) {
-  if (!file) return;
+  if (event && event.target) {
+    event.target.classList.add("active");
+  }
+}
+
+// ---------- CONFIRM UPLOAD ----------
+function confirmUpload() {
+  if (!pendingFile) {
+    toast("No file selected ❌");
+    return;
+  }
 
   const reader = new FileReader();
 
   reader.onload = () => {
     images.push({
       src: reader.result,
-      category: "nature"
+      category: selectedCategory
     });
 
     save();
     render();
-    toast("Image added ✔");
+    toast("Uploaded ✔");
   };
 
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(pendingFile);
+
+  closePopup();
+  pendingFile = null;
 }
 
+// ---------- CLOSE POPUP ----------
+function closePopup() {
+  const popup = document.getElementById("popup");
+  if (popup) popup.classList.add("hidden");
+}
 
 // ---------- DELETE ----------
-function deleteImg(index) {
-  images.splice(index, 1);
+function deleteImg(i) {
+  images.splice(i, 1);
   save();
   render();
   toast("Deleted 🗑");
 }
 
-
-// ---------- CATEGORY ----------
-function changeCategory(index, value) {
-  images[index].category = value;
-  save();
-  toast("Category updated");
-}
-
-
-// ---------- FILTER ----------
-function filterImages(cat) {
-  document.querySelectorAll(".image").forEach(el => {
-    el.style.display =
-      cat === "all" || el.dataset.category === cat ? "block" : "none";
-  });
-}
-
-
-// ---------- DRAG & DROP UPLOAD ----------
+// ---------- UPLOAD EVENTS ----------
 dropZone.onclick = () => upload.click();
 
-dropZone.ondragover = e => {
-  e.preventDefault();
-  dropZone.style.borderColor = "#4f9cff";
-};
+dropZone.ondragover = (e) => e.preventDefault();
 
-dropZone.ondragleave = () => {
-  dropZone.style.borderColor = "gray";
-};
-
-dropZone.ondrop = e => {
+dropZone.ondrop = (e) => {
   e.preventDefault();
   addImage(e.dataTransfer.files[0]);
 };
 
 upload.onchange = () => addImage(upload.files[0]);
 
-
 // ---------- LIGHTBOX ----------
 function openLightbox(i) {
-  currentIndex = i;
   document.getElementById("lightbox").style.display = "flex";
-  show();
+  document.getElementById("lightbox-img").src = images[i].src;
 }
 
 function closeLightbox() {
   document.getElementById("lightbox").style.display = "none";
 }
 
-function show() {
-  document.getElementById("lightbox-img").src = images[currentIndex].src;
-}
-
-function nextImage() {
-  currentIndex = (currentIndex + 1) % images.length;
-  show();
-}
-
-function prevImage() {
-  currentIndex = (currentIndex - 1 + images.length) % images.length;
-  show();
-}
-
-
 // ---------- DARK MODE ----------
 function toggleDarkMode() {
   document.body.classList.toggle("light");
-
-  localStorage.setItem(
-    "theme",
-    document.body.classList.contains("light") ? "light" : "dark"
-  );
-}
-
-if (localStorage.getItem("theme") === "light") {
-  document.body.classList.add("light");
 }
 
 
-// ---------- DRAG TO REORDER ----------
-function enableDragSort() {
+function filterImages(cat) {
+  currentFilter = cat;
+
+  const buttons = document.querySelectorAll(".filter");
+
+  buttons.forEach(btn => btn.classList.remove("active"));
+  event.target.classList.add("active");
+
+  applyFilter();
+}
+function applyFilter() {
   const items = document.querySelectorAll(".image");
 
-  items.forEach(item => {
-    item.addEventListener("dragstart", e => {
-      e.dataTransfer.setData("from", item.dataset.index);
-    });
+  items.forEach((el, i) => {
+    const match =
+      currentFilter === "all" ||
+      images[i].category === currentFilter;
 
-    item.addEventListener("dragover", e => e.preventDefault());
-
-    item.addEventListener("drop", e => {
-      e.preventDefault();
-
-      const from = e.dataTransfer.getData("from");
-      const to = item.dataset.index;
-
-      const moved = images.splice(from, 1)[0];
-      images.splice(to, 0, moved);
-
-      save();
-      render();
-      toast("Reordered 🔄");
-    });
+    el.style.display = match ? "block" : "none";
   });
 }

@@ -1,53 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Smart Image Gallery</title>
-
-  <link rel="stylesheet" href="style.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Gallery</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-
-<!-- HEADER -->
-<header class="glass">
-  <h1>Smart Image Gallery</h1>
+<div class="filter-bar glass">
+  <button onclick="filterImages('all')" class="filter active">All</button>
+  <button onclick="filterImages('nature')" class="filter">🌿 Nature</button>
+  <button onclick="filterImages('city')" class="filter">🏙 City</button>
+  <button onclick="filterImages('people')" class="filter">👤 People</button>
+</div>
+<header class="topbar">
+  <h2>📸 Gallery</h2>
 
   <div class="controls">
-    <button onclick="toggleDarkMode()">🌙 Theme</button>
-  </div>
-
-  <div class="filters">
-    <button onclick="filterImages('all')">All</button>
-    <button onclick="filterImages('nature')">Nature</button>
-    <button onclick="filterImages('city')">City</button>
-    <button onclick="filterImages('people')">People</button>
+    <button class="theme-btn" onclick="toggleDarkMode()">🌙</button>
   </div>
 </header>
 
-<!-- UPLOAD ZONE -->
-<div class="drop-zone glass" id="dropZone">
-  <p>Drag & Drop Images Here or Click to Upload</p>
-  <input type="file" id="upload" accept="image/*" hidden>
+<!-- UPLOAD -->
+<div class="upload-box" id="dropZone">
+  Drag & Drop or Click to Upload
+  <input type="file" id="upload" hidden>
 </div>
 
 <!-- GALLERY -->
 <div class="gallery" id="gallery"></div>
 
 <!-- LIGHTBOX -->
-<div id="lightbox">
-  <span class="close" onclick="closeLightbox()">&times;</span>
-
+<div id="lightbox" onclick="closeLightbox()">
   <img id="lightbox-img">
+</div>
 
-  <div class="nav">
-    <button onclick="prevImage()">Prev</button>
-    <button onclick="nextImage()">Next</button>
+<!-- 🔥 CATEGORY POPUP -->
+<div id="popup" class="popup hidden">
+  <div class="popup-card">
+
+    <h3>Select Category</h3>
+
+    <div class="popup-options">
+      <button class="cat-btn" onclick="setCategory('nature', event)">🌿 Nature</button>
+<button class="cat-btn" onclick="setCategory('city', event)">🏙 City</button>
+<button class="cat-btn" onclick="setCategory('people', event)">👤 People</button>
+    </div>
+
+    <button class="confirm" onclick="confirmUpload()">Upload Image</button>
+
   </div>
 </div>
 
-<!-- TOAST -->
 <div id="toast"></div>
 
 <script src="script.js"></script>
