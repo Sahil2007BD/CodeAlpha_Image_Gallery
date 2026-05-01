@@ -1,5 +1,6 @@
 const gallery = document.getElementById("gallery");
 const uploadInput = document.getElementById("upload");
+const dropZone = document.getElementById("dropZone");
 
 let images = [
   {src:"https://picsum.photos/id/1018/400/300", category:"nature"},
@@ -9,9 +10,10 @@ let images = [
 
 let currentIndex = 0;
 
-// Render images
+// Render
 function renderGallery() {
   gallery.innerHTML = "";
+
   images.forEach((img, index) => {
     const div = document.createElement("div");
     div.classList.add("image");
@@ -19,6 +21,11 @@ function renderGallery() {
 
     div.innerHTML = `
       <img src="${img.src}" loading="lazy" onclick="openLightbox(${index})">
+
+      <div class="actions">
+        <button onclick="deleteImage(${index})">🗑</button>
+        <button onclick="editCategory(${index})">✏️</button>
+      </div>
     `;
 
     gallery.appendChild(div);
@@ -26,7 +33,8 @@ function renderGallery() {
 }
 renderGallery();
 
-// Filter with animation
+
+// ---------------- FILTER ----------------
 function filterImages(category) {
   document.querySelectorAll(".image").forEach(item => {
     if (category === "all" || item.dataset.category === category) {
@@ -37,7 +45,8 @@ function filterImages(category) {
   });
 }
 
-// Lightbox
+
+// ---------------- LIGHTBOX ----------------
 const lightbox = document.getElementById("lightbox");
 const lightboxImg = document.getElementById("lightbox-img");
 
@@ -65,34 +74,38 @@ function prevImage() {
   showImage();
 }
 
-// Swipe support
-let startX = 0;
 
-lightbox.addEventListener("touchstart", e => {
-  startX = e.touches[0].clientX;
+// ---------------- DRAG & DROP ----------------
+
+// Click to open file picker
+dropZone.addEventListener("click", () => uploadInput.click());
+
+// Drag events
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.classList.add("dragover");
 });
 
-lightbox.addEventListener("touchend", e => {
-  let endX = e.changedTouches[0].clientX;
-  if (startX - endX > 50) nextImage();
-  if (endX - startX > 50) prevImage();
+dropZone.addEventListener("dragleave", () => {
+  dropZone.classList.remove("dragover");
 });
 
-// Dark mode with localStorage
-function toggleDarkMode() {
-  document.body.classList.toggle("light");
-  localStorage.setItem("theme", document.body.classList.contains("light") ? "light" : "dark");
-}
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("dragover");
 
-// Load saved theme
-if (localStorage.getItem("theme") === "light") {
-  document.body.classList.add("light");
-}
+  const file = e.dataTransfer.files[0];
+  handleFile(file);
+});
 
-// Upload image
+// File input fallback
 uploadInput.addEventListener("change", () => {
   const file = uploadInput.files[0];
-  if (!file) return;
+  handleFile(file);
+});
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith("image/")) return;
 
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -103,4 +116,53 @@ uploadInput.addEventListener("change", () => {
     renderGallery();
   };
   reader.readAsDataURL(file);
+}
+
+
+// ---------------- DELETE ----------------
+function deleteImage(index) {
+  if (confirm("Delete this image?")) {
+    images.splice(index, 1);
+    renderGallery();
+  }
+}
+
+
+// ---------------- EDIT ----------------
+function editCategory(index) {
+  const newCategory = prompt("Enter category (nature/city/people/custom):");
+
+  if (newCategory) {
+    images[index].category = newCategory.toLowerCase();
+    renderGallery();
+  }
+}
+
+
+// ---------------- SWIPE ----------------
+let startX = 0;
+
+lightbox.addEventListener("touchstart", e => {
+  startX = e.touches[0].clientX;
 });
+
+lightbox.addEventListener("touchend", e => {
+  let endX = e.changedTouches[0].clientX;
+
+  if (startX - endX > 50) nextImage();
+  if (endX - startX > 50) prevImage();
+});
+
+
+// ---------------- DARK MODE ----------------
+function toggleDarkMode() {
+  document.body.classList.toggle("light");
+  localStorage.setItem(
+    "theme",
+    document.body.classList.contains("light") ? "light" : "dark"
+  );
+}
+
+if (localStorage.getItem("theme") === "light") {
+  document.body.classList.add("light");
+}
